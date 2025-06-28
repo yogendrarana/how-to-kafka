@@ -1,0 +1,56 @@
+services:
+  kafka1:
+    image: bitnami/kafka:4.0
+    container_name: kafka1
+    hostname: kafka1
+    ports:
+      - "9094:9094"
+    environment:
+      # KRaft mode: 
+      - KAFKA_ENABLE_KRAFT=yes #Bitnami specific setting to enable KRaft mode 
+      
+      # KRaft core config:
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_BROKER_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka1:9093
+      - KAFKA_KRAFT_CLUSTER_ID=abcdefghijk12345678901
+      
+      # Listeners and security config:
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka1:9092,EXTERNAL://localhost:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT # Use EXTERNAL:SSL in production
+
+      # Dev Settings:
+      - ALLOW_PLAINTEXT_LISTENER=yes # Bitnami specific setting to allow plaintext listener, remove in production
+      - BITNAMI_DEBUG=no # Disable debug mode to reduce overhead
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true # Enable auto-creation of topics
+      
+    networks:
+      - kafka-net
+    volumes:
+      - kafka1-data:/bitnami/kafka
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - '8080:8080'
+    networks:
+      - kafka-net
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local-cluster
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka1:9092
+    depends_on:
+      - kafka1
+    restart: on-failure
+
+networks:
+  kafka-net:
+    driver: bridge
+
+volumes:
+  kafka1-data:
+    driver: local
